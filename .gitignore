@@ -11,3 +11,4 @@ web-app/plugins
 .svn
 plugins/*
 *DB*
+/target
