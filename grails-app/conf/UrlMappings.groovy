@@ -1,11 +1,11 @@
 class UrlMappings {
 
-	static mappings = {
+	static mappings = { 
 		"/people/index/"(controller:"people") {
 			action=[GET:"index"]
 		}
 		"/people/dataTablesData/"(controller:"people") {
-			action=[GET:"dataTablesData"]
+			action=[GET:"dataTablesData", POST:"postAction"]
 		}
 		"/people"(controller:"people") {
 			action=[GET:"list"]

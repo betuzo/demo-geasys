@@ -6,13 +6,56 @@ import grails.converters.XML
 
 class PeopleController {
 	
-	def scaffold = Person
-	
-
 	/**
 	 * View to show data in a jQuery DataTable
 	 */
 	def index = {
+	}
+
+	def postAction = {
+		println params.get("data[0]")
+
+		def personInstance = Person.get(params.get("data[0]"))
+        if (!personInstance) {
+            flash.message = message(code: 'default.not.found.message', args: [message(code: 'contacto.label', default: 'Contacto'), params.id])
+            render "error" as JSON
+            return
+        }
+
+        if (params.version) {
+            def version = params.version.toLong()
+            if (personInstance.version > version) {
+                personInstance.errors.rejectValue("version", "default.optimistic.locking.failure",
+                          [message(code: 'contacto.label', default: 'Contacto')] as Object[],
+                          "Another user has updated this Contacto while you were editing")
+                render "error" as JSON
+                return
+            }
+        }
+
+        personInstance.properties = ["id": params.get("data[0]"), "firstName":params.get("data[1]"), "lastName":params.get("data[2]"), "birthDate":new Date(), "lastUpdated":new Date(), "dateCreated":new Date()]
+
+        if (!personInstance.save(flush: true)) {
+            render personInstance as JSON
+            return
+        }
+
+		flash.message = message(code: 'default.updated.message', args: [message(code: 'contacto.label', default: 'Contacto'), personInstance.id])
+		render personInstance as JSON
+	}
+	
+	/**
+	 * Edit row
+	 */
+	def edit = {
+		println "Editando..."
+	}
+
+	/**
+	 * Remove row
+	 */
+	def remove = {
+		println "Removiendo..."
 	}
 
    /**
@@ -89,6 +132,7 @@ class PeopleController {
 	 * @param iDisplayLength
 	 */
 	def dataTablesData = {
+		println "dataTablesData... $params"
 		def propertiesToRender = ['id', 'firstName', 'lastName', 'birthDate']
 	
 		def dataToRender = [:]
@@ -110,7 +154,7 @@ class PeopleController {
 		   query.append(" where (${filter})")
 		}
 		
-		def sortProperty = propertiesToRender[params.iSortCol_0 as int]
+		def sortProperty = params.iSortCol_0 ? propertiesToRender[params.iSortCol_0 as int] : 'firstName'
 		def sortDir = params.sSortDir_0?.equalsIgnoreCase('asc') ? 'asc' : 'desc'
 		query.append(" order by p.${sortProperty} ${sortDir}")
 	
@@ -128,8 +172,10 @@ class PeopleController {
 			   [filter: "%${params.sSearch}%"],
 			   [max: params.iDisplayLength as int, offset: params.iDisplayStart as int])
 		} else {
+		   def iMax = params.iDisplayLength? params.iDisplayLength as int : 0	
+		   def iOffset = params.iDisplayStart? params.iDisplayStart as int : 0
 		   people = Person.findAll(query.toString(),
-			   [max: params.iDisplayLength as int, offset: params.iDisplayStart as int])
+			   [max: iMax, offset: iOffset])
 		}
 	
 		// Process the response
@@ -138,7 +184,6 @@ class PeopleController {
 		   propertiesToRender.each { record << person."${it}" }
 		   dataToRender.aaData << record
 		}
-	
 		render dataToRender as JSON	
 	}
 }
