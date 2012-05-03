@@ -24,19 +24,19 @@
 				editor = new $.fn.dataTable.Editor( {
 					"ajaxUrl": '${request.contextPath + '/people/dataTablesData'}',
 					"domTable": "#example",
-					"fields": [ {
-							"label": "Id:",
-							"name": "0",
-						}, {
+					"fields": [ 
+						{
 							"label": "Fisrt Name:",	
-							"name": "1"
+							"name": "firstName"
 						}, {
 							"label": "Second Name:",
-							"name": "2"
+							"name": "lastName"
 						}, {
 							"label": "BirthDate:",
-							"name": "3",
-							"type": "date"
+							"name": "birthDate",
+							"type": "date",
+							"dateFormat": $.datepicker.ISO_8601
+
 						}
 					]
 				} );
@@ -44,11 +44,11 @@
 				$('#example').dataTable( {
 					"sDom": "Tfrtip",
 					"sAjaxSource": '${request.contextPath + '/people/dataTablesData'}',
+					"sPaginationType": "full_numbers",
 					"aoColumns": [
-						{ "mDataProp": 0 },
-						{ "mDataProp": 1 },
-						{ "mDataProp": 2, "sClass": "center" },
-						{ "mDataProp": 3, "sClass": "center" }
+						{ "mDataProp": "firstName" },
+						{ "mDataProp": "lastName" },
+						{ "mDataProp": "birthDate", "sClass": "center" }
 					],
 					"oTableTools": {
 						"sRowSelect": "multi",
@@ -69,15 +69,13 @@
 <table cellpadding="0" cellspacing="0" border="0" class="display" id="example" width="100%">
 	<thead>
 		<tr>
-			<th width="30%">Id</th>
-			<th width="20%">Fisrt Name</th>
-			<th width="18%">Second Name</th>
-			<th width="20%">BirthDate</th>
+			<th width="30%">Fisrt Name</th>
+			<th width="28%">Second Name</th>
+			<th width="30%">BirthDate</th>
 		</tr>
 	</thead>
 	<tfoot>
 		<tr>
-			<th>Id</th>
 			<th>Fisrt Name</th>
 			<th>Second Name</th>
 			<th>BirthDate</th>

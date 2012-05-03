@@ -6,6 +6,7 @@ class UrlMappings {
 		}
 		"/people/dataTablesData/"(controller:"people") {
 			action=[GET:"dataTablesData", POST:"postAction"]
+			println this
 		}
 		"/people"(controller:"people") {
 			action=[GET:"list"]

@@ -2,9 +2,14 @@ package leapingmind
 
 import grails.converters.JSON
 import grails.converters.XML
+import org.springframework.dao.DataIntegrityViolationException
 
 
 class PeopleController {
+
+	def static formatDate = 'yyyy-MM-dd'
+	def static responseEditor = ['id', 'error', 'fieldErrors', 'data']
+
 	
 	/**
 	 * View to show data in a jQuery DataTable
@@ -13,27 +18,49 @@ class PeopleController {
 	}
 
 	def postAction = {
-		println params.get("data[0]")
+		println "Imprimiendo parametros $params"
+		switch(params.getRequest().getParameter("action")) {
+			case "edit":
+				edit(params)
+			break
+			case "create":
+				create(params)
+			break
+			case "remove":
+				remove(params)
+			break
+		}
 
-		def personInstance = Person.get(params.get("data[0]"))
+
+	}
+
+	/**
+	 * Create row
+	 */
+	def create = { parameters ->
+		def personInstance = new Person()
+		personInstance.properties = ["firstName":parameters.get("data[firstName]"), "lastName":parameters.get("data[lastName]"), "birthDate":Date.parse( formatDate, parameters.get("data[birthDate]") ), "lastUpdated":new Date()]
+        if (!personInstance.save(flush: true)) {
+        	render personInstance as JSON
+            return
+        }
+
+		flash.message = message(code: 'default.created.message', args: [message(code: 'contacto.label', default: 'Contacto'), personInstance.id])
+		render personInstance as JSON
+    }
+	
+	/**
+	 * Edit row
+	 */
+	def edit = { parameters ->
+		def personInstance = Person.get(parameters.get("id"))
         if (!personInstance) {
-            flash.message = message(code: 'default.not.found.message', args: [message(code: 'contacto.label', default: 'Contacto'), params.id])
+            flash.message = message(code: 'default.not.found.message', args: [message(code: 'contacto.label', default: 'Contacto'), parameters.id])
             render "error" as JSON
             return
         }
 
-        if (params.version) {
-            def version = params.version.toLong()
-            if (personInstance.version > version) {
-                personInstance.errors.rejectValue("version", "default.optimistic.locking.failure",
-                          [message(code: 'contacto.label', default: 'Contacto')] as Object[],
-                          "Another user has updated this Contacto while you were editing")
-                render "error" as JSON
-                return
-            }
-        }
-
-        personInstance.properties = ["id": params.get("data[0]"), "firstName":params.get("data[1]"), "lastName":params.get("data[2]"), "birthDate":new Date(), "lastUpdated":new Date(), "dateCreated":new Date()]
+        personInstance.properties = ["id": parameters.get("id"), "firstName":parameters.get("data[firstName]"), "lastName":parameters.get("data[lastName]"), "birthDate":Date.parse( formatDate, parameters.get("data[birthDate]") ), "lastUpdated":new Date()]
 
         if (!personInstance.save(flush: true)) {
             render personInstance as JSON
@@ -43,19 +70,35 @@ class PeopleController {
 		flash.message = message(code: 'default.updated.message', args: [message(code: 'contacto.label', default: 'Contacto'), personInstance.id])
 		render personInstance as JSON
 	}
-	
-	/**
-	 * Edit row
-	 */
-	def edit = {
-		println "Editando..."
-	}
 
 	/**
 	 * Remove row
 	 */
-	def remove = {
-		println "Removiendo..."
+	def remove = { parameters ->
+		println "Removiendo... $parameters"
+		def response = [:]
+		for(def it in parameters.get("data[]")) {
+			println it
+			def personInstance = Person.get(it)
+	        if (personInstance) {
+		        try {
+		            personInstance.delete(flush: true)
+					flash.message = message(code: 'default.deleted.message', args: [message(code: 'contacto.label', default: 'Contacto'), params.id])
+		        }
+		        catch (DataIntegrityViolationException e) {
+					flash.message = message(code: 'default.not.deleted.message', args: [message(code: 'contacto.label', default: 'Contacto'), params.id])
+		            redirect(action: "show", id: params.id)
+		        }
+	    	}
+		}
+
+		def fieldErrors = []
+		def data = []
+		response."${responseEditor[0]}" = "-1"
+		response."${responseEditor[1]}" = ""
+		response."${responseEditor[2]}" = fieldErrors
+		response."${responseEditor[3]}" = data
+		render response as JSON
 	}
 
    /**
@@ -132,7 +175,6 @@ class PeopleController {
 	 * @param iDisplayLength
 	 */
 	def dataTablesData = {
-		println "dataTablesData... $params"
 		def propertiesToRender = ['id', 'firstName', 'lastName', 'birthDate']
 	
 		def dataToRender = [:]
@@ -180,8 +222,19 @@ class PeopleController {
 	
 		// Process the response
 		people?.each { person ->
-		   def record = []
-		   propertiesToRender.each { record << person."${it}" }
+		   def record = [:]
+		   def valFormat = "";
+		   def col = "";
+		   propertiesToRender.each { 
+		   	if (person."${it}" instanceof java.sql.Timestamp)
+		   		valFormat = person."${it}".format(formatDate)
+		   	else
+		   		valFormat = person."${it}"
+		   	col = "$it"
+		   	if ("$it" == "id")
+		   		col = "DT_RowId"
+		   	record."${col}" = valFormat
+		   }
 		   dataToRender.aaData << record
 		}
 		render dataToRender as JSON	
